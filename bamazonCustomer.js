@@ -1,5 +1,6 @@
 var inquirer = require("inquirer");
 var mysql = require("mysql");
+var cTable = require("console.table");
 
 
 var connection = mysql.createConnection({
@@ -11,7 +12,7 @@ var connection = mysql.createConnection({
   // Username
   user: "root",
 
-  // Your password
+  // SQL DB & PW
   password: "CodyParkey1!",
   database: "bamazon"
 });
@@ -22,42 +23,78 @@ connection.connect(function (err) {
   afterConnection();
 
 });
-  
-  // Create a "Prompt" with a series of questions.
-  inquirer
-    .prompt([
-      // Here we create a basic text prompt.
-      {
-        type: "input",
-        message: "What is the ID of the product they would like to buy?",
-        name: "id"
-      },
-      // Here we create a basic password-protected text prompt.
-      {
-        type: "input",
-        message: "How many units of this would you like to buy?",
-        name: "amount"
-      }
 
-    ])
-  // .then(function (inquirerResponse) {
-  //   if (inquirerResponse.id == "1") {
-  //     console.log("\nWe can Get You" + bmazon.product_title);
-  //     console.log("\nThere are total: " + bmazon.stock_quantity);
-  //   } else if (inquirerResponse.service_title == "Bid on an item") {
-  //     console.log("\nWelcome " + inquirerResponse.name);
-  //     console.log("Lets " + great_bay_db.service_title + "!\n");
-  //     listItems();
-  //   } else {
-  //     console.log("\nThat's okay " + inquirerResponse.name + ", come again when you are ready!\n");
-  //   }
-  // });
-
-  // });
+//Display all products
   function afterConnection() {
     connection.query("SELECT * FROM products", function (err, res) {
       if (err) throw err;
-      console.log(res);
+      var items = cTable.getTable(res);
+      console.log("\n" + "Amazon options: " + "\n" + items);
       connection.end();
+      customerstore();
     })
   }
+
+
+//Customer input
+
+function customerstore() {
+  inquirer
+      .prompt({
+        type: "input",
+        message: "What is the ID of the product they would like to buy?",
+        name: "idI"
+      })
+      .then(function (inqRes) {
+          var itemQuery = "SELECT product_title, dept_title, price, stock_quantity FROM bamazon.products WHERE ?";
+          connection.query(itemQuery, { id: inqRes.idI}, function (err, res) {
+              if (err) throw err;
+              if (res[0].stock_quantity > 0) {
+                  custQuant(inqRes.idI, res[0].stock_quantity, res[0].price);
+              } else {
+                  console.log("Sorry, that item is out of stock.");
+                  customerstor();
+              }
+          });
+      });
+}
+
+
+function custQuant(id, stock_quantity, price) {
+  inquirer
+      .prompt({
+        type: "Cinput",
+        message: "How many units of this would you like to buy?",
+        name: "amount"
+      })
+      .then(function (inqRes, res) {
+          if (inqRes.Cinput <= stock_quantity) {
+              updateDB(id, inqRes.Cinput, price);
+          } else {
+              console.log("Insufficient quantity, there is only: " + stock_quantity + " in stock. Please update your quantity");
+              itemToBuy();
+          }
+      });
+}
+
+//
+
+// function updateBamazon(id, stock_quantity, price) {
+//   var updateQuery = "UPDATE products SET stock_quantity = stock_quantity - ? WHERE idI = ?";
+//   connection.query(updateQuery, [quantity, id], function (err, res) {
+//       if (err) throw err;
+//       console.log("Sold! Your total is: $" + (price * stock_quantity));
+//   })
+//   connection.end();
+
+
+
+//pseudoCode
+//Gather input of what customer wants
+
+//Check inventory and send alert sayuing it is out of stock or place customer input and deduct remaining quantity in database
+    //prevent order going through if theres not enough stock
+    //place customers order if everything is fine
+
+//re-run inquirer to see if customer wants something else
+    //restart loop or end connection
